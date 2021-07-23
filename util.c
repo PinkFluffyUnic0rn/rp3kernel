@@ -1,5 +1,6 @@
-#include "util.h"
+#include <stdint.h>
 
+#include "util.h"
 #include "periph.h"
 
 void util_sendstr(char *s)

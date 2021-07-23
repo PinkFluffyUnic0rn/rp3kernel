@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 
 #include "periph.h"
 #include "elf32.h"
@@ -9,11 +10,25 @@
 #define MAXELFSIZE 0x00100000
 #define MAXPROCN 128
 #define MEMSTART ((unsigned char *) 0x00800000)
-#define MEMEND ((unsigned char *) 0x40000000)
+#define MEMEND ((unsigned char *) 0x10000000)
 
 unsigned char elf[MAXELFSIZE];
 struct procinfo pi[MAXPROCN]; 
 unsigned char *membreak = MEMSTART;
+unsigned char *heapstart = ((unsigned char *) MEMEND);
+
+void *malloc(size_t size)
+{
+	if (size > heapstart - membreak)
+		return NULL;
+
+	if (heapstart - size < membreak)
+		return NULL;
+
+	heapstart -= size;
+
+	return heapstart;
+}
 
 int notmain(void)
 {
@@ -27,6 +42,7 @@ int notmain(void)
 	CALLTABLE[0x0007] = timer_init;
 	CALLTABLE[0x0008] = timer_tick;
 	CALLTABLE[0x0009] = leds_off;
+	CALLTABLE[0x000a] = malloc;
 
 	CALLTABLE[0x1000] = util_sendstr;
 	CALLTABLE[0x1001] = util_uint2hexstr;
@@ -38,12 +54,14 @@ int notmain(void)
 
 		Elf32_load(elf, MEMSTART, MEMEND, pi);
 
+		heapstart = ((unsigned char *) MEMEND);
+
 		membreak += pi->imgsz;
 
 		(pi->entry)();
 
 		membreak -= pi->imgsz;
-		
+
 		for (i = 0; i < 1000; ++i)
 			timer_tick();
 	}

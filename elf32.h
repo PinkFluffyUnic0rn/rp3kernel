@@ -4,12 +4,12 @@
 #include <stddef.h>
 
 struct procinfo {
-	unsigned char *entry;
+	void (*entry)();
 	unsigned char *img;
 	size_t imgsz;
 };
 
 int Elf32_load(unsigned char *elf, unsigned char *start,
-	size_t maxsz, struct procinfo *pinfo);
+	unsigned char *maxsz, struct procinfo *pinfo);
 
 #endif

@@ -31,19 +31,6 @@ GET32:
 	ldr r0,[r0]
 	bx lr
 
-.globl BRANCHTO
-BRANCHTO:
-	mov r12,#0
-	mcr p15, 0, r12, c7, c10, 1
-	dsb
-	mov r12, #0
-	mcr p15, 0, r12, c7, c5, 0
-	mov r12, #0
-	mcr p15, 0, r12, c7, c5, 6
-	dsb
-	isb
-	bx r0
-
 .globl dummy
 dummy:
 	bx lr

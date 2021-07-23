@@ -170,7 +170,7 @@ static int Elf32_relocation(struct Elf32_Shdr *shdr, unsigned char *elf,
 }
 
 int Elf32_load(unsigned char *elf, unsigned char *start,
-	size_t maxsz, struct procinfo *pinfo)
+	unsigned char *memend, struct procinfo *pinfo)
 {
 	struct Elf32_Ehdr *hdr;
 	int i;
@@ -178,7 +178,7 @@ int Elf32_load(unsigned char *elf, unsigned char *start,
 	hdr = (struct Elf32_Ehdr *) elf;
 
 	// loading segments into memory
-	pinfo->entry = start + hdr->e_entry;
+	pinfo->entry = (void (*)()) start + hdr->e_entry;
 	pinfo->img = start;
 	pinfo->imgsz = 0;
 	for (i = 0; i < hdr->e_phnum; ++i) {
@@ -187,14 +187,14 @@ int Elf32_load(unsigned char *elf, unsigned char *start,
 		phdr = (struct Elf32_Phdr *) (elf + hdr->e_phoff
 			 + sizeof(struct Elf32_Phdr) * i);
 
+		if (start + phdr->p_vaddr + phdr->p_memsz > memend)
+			return (-1);
+
 		memcpy(start + phdr->p_vaddr,
 			elf + phdr->p_offset, phdr->p_memsz);
 
 		if (phdr->p_vaddr + phdr->p_memsz > pinfo->imgsz)
 			pinfo->imgsz = phdr->p_vaddr + phdr->p_memsz;
-
-		if (pinfo->imgsz > maxsz)
-			return (-1);
 	}
 
 	// relocating symbols

@@ -6,18 +6,14 @@
 #include "util.h"
 
 #define CALLTABLE ((void **) 0x00200000)
-#define MAXELFSIZE (1024 * 1024)
+#define MAXELFSIZE 0x00100000
 #define MAXPROCN 128
-#define MEMSTART 0x00800000
-#define MEMEND 0x40000000
-
-char buf[1024];
+#define MEMSTART ((unsigned char *) 0x00800000)
+#define MEMEND ((unsigned char *) 0x40000000)
 
 unsigned char elf[MAXELFSIZE];
 struct procinfo pi[MAXPROCN]; 
-size_t membreak = MEMSTART;
-
-void BRANCHTO(unsigned int);
+unsigned char *membreak = MEMSTART;
 
 int notmain(void)
 {
@@ -40,10 +36,14 @@ int notmain(void)
 
 		ih_getfile(elf);
 
-		Elf32_load(elf, (unsigned char *) MEMSTART, MEMEND, pi);
+		Elf32_load(elf, MEMSTART, MEMEND, pi);
 
-		BRANCHTO((unsigned int) pi->entry);
+		membreak += pi->imgsz;
 
+		(pi->entry)();
+
+		membreak -= pi->imgsz;
+		
 		for (i = 0; i < 1000; ++i)
 			timer_tick();
 	}

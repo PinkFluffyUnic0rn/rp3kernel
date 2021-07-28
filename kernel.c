@@ -10,15 +10,49 @@
 #define MAXELFSIZE 0x00100000
 #define MAXPROCN 128
 #define MEMSTART ((unsigned char *) 0x00800000)
-#define MEMEND ((unsigned char *) 0x10000000)
+#define MEMEND ((unsigned char *) 0x3F000000)
 
 unsigned char elf[MAXELFSIZE];
 struct procinfo pi[MAXPROCN]; 
 unsigned char *membreak = MEMSTART;
 unsigned char *heapstart = ((unsigned char *) MEMEND);
+struct freeblock *freehead;
+
+struct freeblock {
+	size_t size;
+	struct freeblock *p;
+	struct freeblock *n;
+};
+
+void heapinit()
+{
+	heapstart -= sizeof(struct freeblock);
+
+	freehead = (struct freeblock *) heapstart;
+
+	freehead->size = sizeof(struct freeblock);
+	freehead->n = NULL;
+	freehead->p = NULL;
+}
 
 void *malloc(size_t size)
 {
+	struct freeblock *p;
+	
+	size += sizeof(struct freeblock);
+
+	p = freehead;
+	while (p != NULL) {
+		if (p->size >= size) {
+			p->p->n = p->n;
+			p->n->p = p->p;
+
+			return (heapstart + sizeof(size_t));
+		}
+
+		p = p->n;
+	}
+
 	if (size > heapstart - membreak)
 		return NULL;
 
@@ -27,11 +61,29 @@ void *malloc(size_t size)
 
 	heapstart -= size;
 
-	return heapstart;
+	*((size_t *) heapstart) = size;
+
+	return (heapstart + sizeof(size_t));
+}
+
+void free(void *p)
+{
+	struct freeblock *pp;
+
+	pp = (struct freeblock *) p;
+
+	pp->p = NULL;
+	pp->n = freehead;
+	
+	freehead->p = pp;
+
+	freehead = pp;
 }
 
 int notmain(void)
 {
+	heapinit();
+
 	CALLTABLE[0x0000] = uart_init;
 	CALLTABLE[0x0001] = uart_lcr;
 	CALLTABLE[0x0002] = uart_flush;

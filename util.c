@@ -30,3 +30,47 @@ void util_uint2hexstr(unsigned int c, char *s)
 
 	s[(sizeof(unsigned int) * 8) / 4] = '\0';
 }
+
+void util_uint2str(unsigned int u, char *s)
+{
+	char *c;
+	char buf[64];
+
+	c = buf;
+	while (u != 0) {
+		*c++ = (u % 10) + '0';
+		u /= 10;
+	}
+
+	while (c != buf)
+		*s++ = *(--c);
+
+	*s = '\0';
+}
+
+void util_sendhexint(unsigned int u)
+{
+	char buf[1024];
+
+	util_uint2hexstr(u, buf);
+
+	util_sendstr(buf);
+}
+
+void util_senduint(unsigned int u)
+{
+	char buf[1024];
+
+	util_uint2str(u, buf);
+
+	util_sendstr(buf);
+}
+
+void util_sendint(int i)
+{
+	char buf[1024];
+
+	util_uint2str(i, buf);
+
+	util_sendstr(buf);
+}

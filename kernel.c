@@ -10,11 +10,12 @@
 #define MAXELFSIZE 0x00100000
 #define MAXPROCN 128
 #define MEMSTART ((unsigned char *) 0x00800000)
-#define MEMEND ((unsigned char *) 0x3F000000)
+#define MEMEND ((unsigned char *) 0x10000000)
 
 unsigned char elf[MAXELFSIZE];
 struct procinfo pi[MAXPROCN]; 
 unsigned char *membreak = MEMSTART;
+
 unsigned char *heapstart = ((unsigned char *) MEMEND);
 struct freeblock *freehead;
 
@@ -26,7 +27,7 @@ struct freeblock {
 
 void heapinit()
 {
-	heapstart -= sizeof(struct freeblock);
+	heapstart = MEMEND - sizeof(struct freeblock);
 
 	freehead = (struct freeblock *) heapstart;
 
@@ -38,29 +39,35 @@ void heapinit()
 void *malloc(size_t size)
 {
 	struct freeblock *p;
-	
+
 	size += sizeof(struct freeblock);
+	size = (size & 0xfffffff8) + 0x8;
 
 	p = freehead;
 	while (p != NULL) {
 		if (p->size >= size) {
-			p->p->n = p->n;
-			p->n->p = p->p;
+			if (p->p != NULL)
+				p->p->n = p->n;
+			else
+				freehead = p->n;
 
-			return (heapstart + sizeof(size_t));
+			if (p->n != NULL)
+				p->n->p = p->p;
+
+			return ((unsigned char *) p + sizeof(size_t));
 		}
 
 		p = p->n;
 	}
-
+		
 	if (size > heapstart - membreak)
 		return NULL;
-
+	
 	if (heapstart - size < membreak)
 		return NULL;
 
 	heapstart -= size;
-
+	
 	*((size_t *) heapstart) = size;
 
 	return (heapstart + sizeof(size_t));
@@ -69,6 +76,8 @@ void *malloc(size_t size)
 void free(void *p)
 {
 	struct freeblock *pp;
+
+	p -= sizeof(size_t);
 
 	pp = (struct freeblock *) p;
 
@@ -83,7 +92,7 @@ void free(void *p)
 int notmain(void)
 {
 	heapinit();
-
+	
 	CALLTABLE[0x0000] = uart_init;
 	CALLTABLE[0x0001] = uart_lcr;
 	CALLTABLE[0x0002] = uart_flush;
@@ -95,9 +104,14 @@ int notmain(void)
 	CALLTABLE[0x0008] = timer_tick;
 	CALLTABLE[0x0009] = leds_off;
 	CALLTABLE[0x000a] = malloc;
+	CALLTABLE[0x000b] = free;
 
 	CALLTABLE[0x1000] = util_sendstr;
 	CALLTABLE[0x1001] = util_uint2hexstr;
+	CALLTABLE[0x1002] = util_uint2str;
+	CALLTABLE[0x1003] = util_sendhexint;
+	CALLTABLE[0x1004] = util_senduint;
+	CALLTABLE[0x1005] = util_sendint;
 
 	while (1) {
 		int i;
@@ -105,8 +119,6 @@ int notmain(void)
 		ih_getfile(elf);
 
 		Elf32_load(elf, MEMSTART, MEMEND, pi);
-
-		heapstart = ((unsigned char *) MEMEND);
 
 		membreak += pi->imgsz;
 

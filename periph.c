@@ -24,30 +24,28 @@
 #define AUX_MU_STAT_REG (PBASE+0x00215064)
 #define AUX_MU_BAUD_REG (PBASE+0x00215068)
 
-void PUT32(unsigned int, unsigned int);
-void PUT16(unsigned int, unsigned int);
-void PUT8(unsigned int, unsigned int);
-unsigned int GET32(unsigned int);
+void PUTW(unsigned int, unsigned int);
+unsigned int GETW(unsigned int);
 void dummy(unsigned int);
 
 unsigned int uart_lcr()
 {
-	return(GET32(AUX_MU_LSR_REG));
+	return(GETW(AUX_MU_LSR_REG));
 }
 
 unsigned int uart_recv()
 {
 	while (1) {
-		if (GET32(AUX_MU_LSR_REG) & 0x01)
+		if (GETW(AUX_MU_LSR_REG) & 0x01)
 			break;
 	}
 
-	return (GET32(AUX_MU_IO_REG) & 0xFF);
+	return (GETW(AUX_MU_IO_REG) & 0xFF);
 }
 
 unsigned int uart_check()
 {
-	if (GET32(AUX_MU_LSR_REG) & 0x01)
+	if (GETW(AUX_MU_LSR_REG) & 0x01)
 		return(1);
 
 	return(0);
@@ -55,7 +53,7 @@ unsigned int uart_check()
 
 unsigned int uart_overrun()
 {
-	if(GET32(AUX_MU_LSR_REG) & 0x02)
+	if(GETW(AUX_MU_LSR_REG) & 0x02)
 		return (1);
 
 	return(0);
@@ -64,17 +62,17 @@ unsigned int uart_overrun()
 void uart_send(unsigned int c)
 {
 	while (1) {
-		if (GET32(AUX_MU_LSR_REG) & 0x20)
+		if (GETW(AUX_MU_LSR_REG) & 0x20)
 			break;
 	}
 	
-	PUT32(AUX_MU_IO_REG,c);
+	PUTW(AUX_MU_IO_REG,c);
 }
 
 void uart_flush()
 {
 	while (1) {
-		if ((GET32(AUX_MU_LSR_REG) & 0x100) == 0)
+		if ((GETW(AUX_MU_LSR_REG) & 0x100) == 0)
 			break;
 	}
 }
@@ -83,50 +81,50 @@ void uart_init()
 {
 	unsigned int ra;
 
-	ra = GET32(GPFSEL1);
+	ra = GETW(GPFSEL1);
 
 	ra &= ~(7 << 12);	// gpio14
 	ra |= 2 << 12;		// alt5
 	ra &= ~(7 << 15);	// gpio15
 	ra |= 2 << 15;		// alt5
 
-	PUT32(GPFSEL1, ra);
+	PUTW(GPFSEL1, ra);
 
-	PUT32(GPPUD, 0);
-
-	for (ra = 0; ra < 150; ra++)
-		dummy(ra);
-
-	PUT32(GPPUDCLK0, (1 << 14) | (1 << 15));
+	PUTW(GPPUD, 0);
 
 	for (ra = 0; ra < 150; ra++)
 		dummy(ra);
 
-	PUT32(GPPUDCLK0, 0);
+	PUTW(GPPUDCLK0, (1 << 14) | (1 << 15));
 
-	PUT32(AUX_ENABLES, 1);
-	PUT32(AUX_MU_CNTL_REG, 0);	// disable UART receiver
+	for (ra = 0; ra < 150; ra++)
+		dummy(ra);
 
-	PUT32(AUX_MU_IER_REG, 0);	// clear FIFO
-	PUT32(AUX_MU_LCR_REG, 3);	// 8-bit mode
-	PUT32(AUX_MU_MCR_REG, 0);	// UART1_RTS to high
-	PUT32(AUX_MU_IER_REG, 0);	// clear FIFO
-	PUT32(AUX_MU_IIR_REG, 0xC6);	
-	PUT32(AUX_MU_IIR_REG, 0);	
-	PUT32(AUX_MU_BAUD_REG, 270);
+	PUTW(GPPUDCLK0, 0);
 
-	PUT32(AUX_MU_CNTL_REG, 3);	// enable UART receiver
+	PUTW(AUX_ENABLES, 1);
+	PUTW(AUX_MU_CNTL_REG, 0);	// disable UART receiver
+
+	PUTW(AUX_MU_IER_REG, 0);	// clear FIFO
+	PUTW(AUX_MU_LCR_REG, 3);	// 8-bit mode
+	PUTW(AUX_MU_MCR_REG, 0);	// UART1_RTS to high
+	PUTW(AUX_MU_IER_REG, 0);	// clear FIFO
+	PUTW(AUX_MU_IIR_REG, 0xC6);	
+	PUTW(AUX_MU_IIR_REG, 0);	
+	PUTW(AUX_MU_BAUD_REG, 270);
+
+	PUTW(AUX_MU_CNTL_REG, 3);	// enable UART receiver
 }
 
 void timer_init()
 {
-	PUT32(ARM_TIMER_CTL, 0x00F90000);
-	PUT32(ARM_TIMER_CTL, 0x00F90200);
+	PUTW(ARM_TIMER_CTL, 0x00F90000);
+	PUTW(ARM_TIMER_CTL, 0x00F90200);
 }
 
 unsigned int timer_tick()
 {
-	return (GET32(ARM_TIMER_CNT));
+	return (GETW(ARM_TIMER_CNT));
 }
 
 void leds_off()

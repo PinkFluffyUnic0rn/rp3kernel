@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "util.h"
 #include "periph.h"
@@ -73,4 +74,45 @@ void util_sendint(int i)
 	util_uint2str(i, buf);
 
 	util_sendstr(buf);
+}
+
+int util_printf(const char *format, ...)
+{
+	va_list vl;
+	const char *c;
+
+	va_start(vl, format);
+
+	for (c = format; *c != '\0'; ++c) {
+		if (*c == '%') {
+			++c;
+			switch (*c) {
+			case 'u':
+				util_senduint(va_arg(vl, uint32_t));
+				break;
+			case 'd':
+				util_sendint(va_arg(vl, int32_t));
+				break;
+			case 'x':
+				util_sendstr("0x");
+				util_sendhexint(va_arg(vl, uint32_t));
+				break;
+			case 's':
+				util_sendstr(va_arg(vl, char *));
+				break;
+			case '%':
+				uart_send('%');
+				break;
+			case '\0':
+				break;
+			}
+		}
+		else {
+			uart_send(*c);
+		}
+	}
+
+	va_end(vl);
+
+	return 0;
 }

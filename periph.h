@@ -1,6 +1,8 @@
 #ifndef PERIPH_H
 #define PERIPH_H
 
+#define PBASE 0x3f000000
+
 void uart_init();
 
 unsigned int uart_lcr();
@@ -20,5 +22,7 @@ void timer_init();
 unsigned int timer_tick();
 
 void leds_off();
+
+void leds_on();
 
 #endif

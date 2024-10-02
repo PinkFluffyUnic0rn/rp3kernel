@@ -13,4 +13,6 @@ void util_senduint(unsigned int u);
 
 void util_sendint(int i);
 
+int util_printf(const char *format, ...);
+
 #endif

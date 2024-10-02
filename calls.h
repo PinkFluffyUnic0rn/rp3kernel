@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#define CALLTABLE ((void **) 0x00200000)
+#define CALLTABLE ((void **) 0x3e000000)
 
 #define uart_init() ((void (*)()) CALLTABLE[0x0000])()
 

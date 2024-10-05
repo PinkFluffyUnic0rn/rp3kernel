@@ -5,9 +5,9 @@
 #include "start.h"
 #include "util.h"
 
-#define KERNELINIT 0x100000
+extern uint32_t kerneloff;
 
-int mmu_flvl(uint32_t va, uint32_t pa, unsigned int flags)
+static int loader_flvl(uint32_t va, uint32_t pa, unsigned int flags)
 {
 	uint32_t *rc;
 
@@ -18,17 +18,16 @@ int mmu_flvl(uint32_t va, uint32_t pa, unsigned int flags)
 	return 0;
 }
 
-int mmu_maprange(uint32_t va0, uint32_t va1, uint32_t pa0, uint32_t flags)
+static int loader_maprange(uint32_t va0, uint32_t va1,
+	uint32_t pa0, uint32_t flags)
 {
 	uint32_t va;
 
 	for (va = va0; va < va1; va += SECTIONSIZE, pa0 += SECTIONSIZE)
-		mmu_flvl(va, pa0, flags);
+		loader_flvl(va, pa0, flags);
 
 	return 0;
 }
-
-void dataflt();
 
 int loadkernel(void)
 {
@@ -36,15 +35,15 @@ int loadkernel(void)
 	*((volatile uint32_t *) 0x02000000) = 0xabcdefab;
 	*((volatile uint32_t *) 0x03000000) = 0xbafedcba;
 
-	mmu_maprange(LOADER, LOADER + LOADERSIZE, LOADER, 0x0);
-	mmu_maprange(KERNEL, KERNEL + KERNELSIZE, KERNELINIT, 0x0);
-	mmu_maprange(PAGETABLES, CALLTABLE, PAGETABLES, 0x0);
-	mmu_maprange(PBASE, ADDREND, PBASE, 0x0);
-	mmu_maprange(0x01000000, 0x02000000, 0x03000000, 0x0);
+	kerneloff = KERNEL - KERNELINIT;
+
+	loader_maprange(LOADER, LOADER + LOADERSIZE, LOADER, 0x0);
+	loader_maprange(KERNEL, KERNEL + KERNELSIZE, KERNELINIT, 0x0);
+	loader_maprange(PAGETABLES, CALLTABLE, PAGETABLES, 0x0);
 
 	mmuenable(PAGETABLES);
 	
-	(kernel + KERNEL - KERNELINIT)();
+	(kernel + kerneloff)();
 	
 	return 0;
 }

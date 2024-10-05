@@ -37,8 +37,6 @@ reset:
 
 	mov sp,#0x10000
 
-	bl uart_init
-
 	mov r0,pc
 	bl loadkernel
 
@@ -46,47 +44,25 @@ hang: b hang
 
 .globl dataflt
 dataflt:
-	mov sp,#0x10000
+;	mov sp,#0x10000
 	
-	push {lr}
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,sp,lr}
 
-	ldr r1,=datafltmsg
-.loop2:
-	ldrb r0,[r1]
-
-	cmp r0,#0x0
-	beq .loop2out
-
-	push {r1}
-	mov r4,#0x3c000000
-	sub r4, r4, #0x100000
-	ldr r3,=uart_send
+	ldr r4,kerneloff
+	ldr r3,=datafault
 	add r4,r4,r3
+		
+	;@ fault status
+	mrc p15,0,r0,c5,c0,0
+
+	;@ fault address
+	mrc p15,0,r1,c6,c0,0
 
 	blx r4
 
-;@	bl uart_send
-	pop {r1}
-	
-	add r1,r1,#0x1
-
-	b .loop2
-
-.loop2out:
-
-	mrc p15,0,r0,c6,c0,0
-
-	mov r4,#0x3c000000
-	sub r4, r4, #0x100000
-	ldr r3,=sendhexint
-	add r4,r4,r3
-
-	blx r4
-
-;@	bl sendhexint
-
-	pop {lr}
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,sp,lr}
 	b hang
+;@	bx lr
 
 .globl mmuenable
 mmuenable:
@@ -157,6 +133,6 @@ mmudisable:
 
 	bx lr
 
-.globl datafltmsg
-datafltmsg:
-	.ascii "Data fault!!!\r\n\0"
+.globl kerneloff
+kerneloff:
+	.word 0x00000000

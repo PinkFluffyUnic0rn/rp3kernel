@@ -10,6 +10,29 @@ static unsigned char elf[MAXELFSIZE];
 static struct procinfo pi[MAXPROCN]; 
 */
 
+uint32_t getvbar();
+
+int mmu_flvl(uint32_t va, uint32_t pa, unsigned int flags)
+{
+	uint32_t *rc;
+
+	rc = (uint32_t *) (PAGETABLES | (va >> 18 & 0xfffffffc));
+
+	*rc = (pa & 0xfff00000) | 0x02 | (flags & 0x7ffc);
+
+	return 0;
+}
+
+int mmu_maprange(uint32_t va0, uint32_t va1, uint32_t pa0, uint32_t flags)
+{
+	uint32_t va;
+
+	for (va = va0; va < va1; va += SECTIONSIZE, pa0 += SECTIONSIZE)
+		mmu_flvl(va, pa0, flags);
+
+	return 0;
+}
+
 int initcalltable()
 {
 	void **ct;
@@ -40,22 +63,25 @@ int initcalltable()
 	return 0;
 }
 
-int datafault()
+int datafault(uint32_t status, uint32_t addr)
 {
-	printf("\r\ndata fault exception!\r\n");
-
+	printf("\r\ndata fault: %x %x\r\n", status, addr);
+	
 	return 0;
 }
 
 int kernel()
 {
 	volatile uint32_t *addrtest;
-
-	addrtest = (volatile uint32_t *) 0x01000000;
-
+	
+	mmu_maprange(PBASE, ADDREND, PBASE, 0x0);
+	mmu_maprange(0x01000000, 0x02000000, 0x03000000, 0x0);
+	
 	uart_init();
 
 	printf("\r\n\r\n\r\nhello from kernel!\r\n");
+	
+	addrtest = (volatile uint32_t *) 0x01000000;
 	printf("%x value after: %x\r\n", addrtest, *addrtest);
 
 	*((uint32_t *) 0x03000000) = 0x11223344;

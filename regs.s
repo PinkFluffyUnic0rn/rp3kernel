@@ -14,6 +14,12 @@ getpc:
 
 	bx lr
 
+.globl getvbar
+getvbar:
+	mrc p15,0,r0,c12,c0,0
+
+	bx lr
+
 .globl dummy
 dummy:
 	bx lr

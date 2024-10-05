@@ -1,5 +1,6 @@
-#include "periph.h"
+#include "start.h"
 
+#include "periph.h"
 
 #define ARM_TIMER_CTL   (PBASE+0x0000B408)
 #define ARM_TIMER_CNT   (PBASE+0x0000B420)
@@ -113,31 +114,6 @@ void uart_init()
 	PUTW(AUX_MU_BAUD_REG, 270);
 
 	PUTW(AUX_MU_CNTL_REG, 3);	// enable UART receiver
-
-/*
-    unsigned int ra;
-
-    PUTW(AUX_ENABLES,1);
-    PUTW(AUX_MU_IER_REG,0);
-    PUTW(AUX_MU_CNTL_REG,0);
-    PUTW(AUX_MU_LCR_REG,3);
-    PUTW(AUX_MU_MCR_REG,0);
-    PUTW(AUX_MU_IER_REG,0);
-    PUTW(AUX_MU_IIR_REG,0xC6);
-    PUTW(AUX_MU_BAUD_REG,270);
-    ra=GETW(GPFSEL1);
-    ra&=~(7<<12); //gpio14
-    ra|=2<<12;    //alt5
-    ra&=~(7<<15); //gpio15
-    ra|=2<<15;    //alt5
-    PUTW(GPFSEL1,ra);
-    PUTW(GPPUD,0);
-    for(ra=0;ra<150;ra++) dummy(ra);
-    PUTW(GPPUDCLK0,(1<<14)|(1<<15));
-    for(ra=0;ra<150;ra++) dummy(ra);
-    PUTW(GPPUDCLK0,0);
-    PUTW(AUX_MU_CNTL_REG,3);
-    */
 }
 
 void timer_init()

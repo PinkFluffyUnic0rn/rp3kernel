@@ -5,5 +5,12 @@ MEMORY
 
 SECTIONS
 {
-    .text : { *(.text) } > ram
+	.text 0x8000: { 
+		start.o (.text);
+		loader.o (.text);
+	}
+
+	.got 0x9000: { *.got }
+	
+	.kernel 0x00100000: { *(EXCLUDE_FILE(*start.o *loader.o) .text) }
 }

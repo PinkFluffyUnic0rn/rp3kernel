@@ -1,5 +1,24 @@
 .globl _start
 _start:
+	ldr pc,reseth
+	ldr pc,undefh
+	ldr pc,swih
+	ldr pc,prefh
+	ldr pc,datah
+	ldr pc,hyph
+	ldr pc,irqh
+	ldr pc,fiqh
+
+reseth:		.word reset
+undefh:		.word dataflt
+swih:		.word dataflt
+prefh:		.word dataflt
+datah:		.word dataflt
+hyph:		.word dataflt
+irqh:		.word dataflt
+fiqh:		.word dataflt
+
+reset:
 	mrs r0,cpsr
 	bic r0,r0,#0x1F
 
@@ -9,21 +28,65 @@ _start:
 	msr ELR_hyp,r0
 	eret
 
-	mov sp,#0x8000
+	mrc p15, 0, r1, c12, c0, 0 ;@ get vbar
+	mov r0,#0x8000
+	ldmia r0!,{r2,r3,r4,r5,r6,r7,r8,r9}
+	stmia r1!,{r2,r3,r4,r5,r6,r7,r8,r9}
+	ldmia r0!,{r2,r3,r4,r5,r6,r7,r8,r9}
+	stmia r1!,{r2,r3,r4,r5,r6,r7,r8,r9}
+
+	mov sp,#0x10000
+
+	bl uart_init
+
 	mov r0,pc
-	bl notmain
+	bl loadkernel
 
 hang: b hang
 
-.globl PUTW
-PUTW:
-	str r1,[r0]
-	bx lr
+.globl dataflt
+dataflt:
+	mov sp,#0x10000
+	
+	push {lr}
 
-.globl GETW
-GETW:
-	ldr r0,[r0]
-	bx lr
+	ldr r1,=datafltmsg
+.loop2:
+	ldrb r0,[r1]
+
+	cmp r0,#0x0
+	beq .loop2out
+
+	push {r1}
+	mov r4,#0x3c000000
+	sub r4, r4, #0x100000
+	ldr r3,=uart_send
+	add r4,r4,r3
+
+	blx r4
+
+;@	bl uart_send
+	pop {r1}
+	
+	add r1,r1,#0x1
+
+	b .loop2
+
+.loop2out:
+
+	mrc p15,0,r0,c6,c0,0
+
+	mov r4,#0x3c000000
+	sub r4, r4, #0x100000
+	ldr r3,=sendhexint
+	add r4,r4,r3
+
+	blx r4
+
+;@	bl sendhexint
+
+	pop {lr}
+	b hang
 
 .globl mmuenable
 mmuenable:
@@ -94,19 +157,6 @@ mmudisable:
 
 	bx lr
 
-.globl dummy
-dummy:
-	bx lr
-
-
-;@-------------------------------------------------------------------------
-;@
-;@ Copyright (c) 2012 David Welch dwelch@dwelch.com
-;@
-;@ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-;@
-;@ The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-;@
-;@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-;@
-;@-------------------------------------------------------------------------
+.globl datafltmsg
+datafltmsg:
+	.ascii "Data fault!!!\r\n\0"

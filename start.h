@@ -23,8 +23,6 @@ int mmuenable(uint32_t);
 
 int mmudisable();
 
-int invalidatetlbs();
-
 uint32_t getpc();
 
 #endif

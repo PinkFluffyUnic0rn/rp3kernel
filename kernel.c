@@ -11,6 +11,7 @@ static struct procinfo pi[MAXPROCN];
 */
 
 uint32_t getvbar();
+void invalidatetlbs();
 
 int mmu_flvl(uint32_t va, uint32_t pa, unsigned int flags)
 {
@@ -29,6 +30,17 @@ int mmu_maprange(uint32_t va0, uint32_t va1, uint32_t pa0, uint32_t flags)
 
 	for (va = va0; va < va1; va += SECTIONSIZE, pa0 += SECTIONSIZE)
 		mmu_flvl(va, pa0, flags);
+
+	return 0;
+}
+
+int mmu_printflvl(uint32_t va)
+{
+	uint32_t *rc;
+
+	rc = (uint32_t *) (PAGETABLES | (va >> 18 & 0xfffffffc));
+
+	printf("%x: %x\r\n", (uint32_t) rc, *rc);
 
 	return 0;
 }
@@ -63,9 +75,58 @@ int initcalltable()
 	return 0;
 }
 
-int datafault(uint32_t status, uint32_t addr)
+int undefined(uint32_t lr)
 {
-	printf("\r\ndata fault: %x %x\r\n", status, addr);
+	printf("\r\nindefined: %x\r\n", lr);
+
+	return 0;
+}
+
+int swi()
+{
+	printf("\r\nswi\r\n");
+	
+	return 0;
+}
+
+int prefetch()
+{
+	printf("\r\nprefetch\r\n");
+	
+	return 0;
+}
+
+int datafault(uint32_t pc, uint32_t status, uint32_t addr)
+{
+	uint32_t pageaddr;
+
+	printf("\r\ndata fault: %x %x %x\r\n", pc, status, addr);
+
+	pageaddr = addr & 0xfff00000;
+	
+	mmu_maprange(pageaddr, pageaddr + 0x00100000, 0x02000000, 0x0);
+	invalidatetlbs();
+
+	return 0;
+}
+
+int hyp()
+{
+	printf("\r\nhyp\r\n");
+	
+	return 0;
+}
+
+int irq()
+{
+	printf("\r\nirq\r\n");
+	
+	return 0;
+}
+
+int fiq()
+{
+	printf("\r\nfiq\r\n");
 	
 	return 0;
 }
@@ -76,17 +137,36 @@ int kernel()
 	
 	mmu_maprange(PBASE, ADDREND, PBASE, 0x0);
 	mmu_maprange(0x01000000, 0x02000000, 0x03000000, 0x0);
+	invalidatetlbs();
 	
 	uart_init();
 
-	printf("\r\n\r\n\r\nhello from kernel!\r\n");
-	
 	addrtest = (volatile uint32_t *) 0x01000000;
-	printf("%x value after: %x\r\n", addrtest, *addrtest);
+	printf("%x value: %x\r\n", addrtest, *addrtest);
 
-	*((uint32_t *) 0x03000000) = 0x11223344;
+	printf("\r\npage table before:\r\n");
+	mmu_printflvl(LOADER);
+	mmu_printflvl(KERNEL);
+	mmu_printflvl(PAGETABLES);
+	mmu_printflvl(PBASE);
+	mmu_printflvl(0x01000000);
+	mmu_printflvl(0x03000000);
+
+	*((volatile uint32_t *) 0x03000000) = 0x11223344;
+	
+	printf("\r\npage table after:\r\n");
+	mmu_printflvl(LOADER);
+	mmu_printflvl(KERNEL);
+	mmu_printflvl(PAGETABLES);
+	mmu_printflvl(PBASE);
+	mmu_printflvl(0x01000000);
+	mmu_printflvl(0x03000000);
 
 	printf("pc value: %x\r\n", getpc());
+	
+	addrtest = (volatile uint32_t *) 0x03000000;
+	printf("%x value after: %x\r\n", addrtest, *addrtest);
+
 
 	while (1) {
 		int i;

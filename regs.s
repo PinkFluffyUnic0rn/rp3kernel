@@ -20,6 +20,16 @@ getvbar:
 
 	bx lr
 
+.globl invalidatetlbs
+invalidatetlbs:
+	mov r2,#0
+	mcr p15,0,r2,c7,c5,0
+	mcr p15,0,r2,c7,c5,6
+	mcr p15,0,r2,c8,c7,0
+	dsb
+
+	bx lr
+
 .globl dummy
 dummy:
 	bx lr

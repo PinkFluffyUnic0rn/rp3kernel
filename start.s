@@ -10,13 +10,13 @@ _start:
 	ldr pc,fiqh
 
 reseth:		.word reset
-undefh:		.word dataflt
-swih:		.word dataflt
-prefh:		.word dataflt
+undefh:		.word undf
+swih:		.word swh
+prefh:		.word prf
 datah:		.word dataflt
-hyph:		.word dataflt
-irqh:		.word dataflt
-fiqh:		.word dataflt
+hyph:		.word hp
+irqh:		.word rq
+fiqh:		.word fq
 
 reset:
 	mrs r0,cpsr
@@ -42,27 +42,145 @@ reset:
 
 hang: b hang
 
+.globl undf
+undf:
+	mov sp,#0x20000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	ldr r4,kerneloff
+	ldr r3,=undefined
+	add r4,r4,r3
+
+	mov r0,lr
+	blx r4
+
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	mrs r0,spsr
+	msr cpsr,r0
+
+	b hang
+
+.globl swh
+swh:
+	mov sp,#0x20000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	ldr r4,kerneloff
+	ldr r3,=swh
+	add r4,r4,r3
+
+	blx r4
+
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	mrs r0,spsr
+	msr cpsr,r0
+
+	b hang
+
+.globl prf
+prf:
+	mov sp,#0x20000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	ldr r4,kerneloff
+	ldr r3,=prefetch
+	add r4,r4,r3
+
+	blx r4
+
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	mrs r0,spsr
+	msr cpsr,r0
+
+	b hang
+
+.globl hp
+hp:
+	mov sp,#0x20000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	ldr r4,kerneloff
+	ldr r3,=hyp
+	add r4,r4,r3
+
+	blx r4
+
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	mrs r0,spsr
+	msr cpsr,r0
+
+	b hang
+
+.globl rq
+rq:
+	mov sp,#0x20000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	ldr r4,kerneloff
+	ldr r3,=irq
+	add r4,r4,r3
+
+	blx r4
+
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	mrs r0,spsr
+	msr cpsr,r0
+
+	b hang
+
+.globl fq
+fq:
+	mov sp,#0x20000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	ldr r4,kerneloff
+	ldr r3,=fiq
+	add r4,r4,r3
+
+	blx r4
+
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	mrs r0,spsr
+	msr cpsr,r0
+
+	b hang
+
 .globl dataflt
 dataflt:
-;	mov sp,#0x10000
-	
-	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,sp,lr}
+	mov sp,#0x10000
+		
+	push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
 
 	ldr r4,kerneloff
 	ldr r3,=datafault
 	add r4,r4,r3
-		
+	
+	;@ process counter
+	sub r0,lr,#8
+
 	;@ fault status
-	mrc p15,0,r0,c5,c0,0
+	mrc p15,0,r1,c5,c0,0
 
 	;@ fault address
-	mrc p15,0,r1,c6,c0,0
+	mrc p15,0,r2,c6,c0,0
 
 	blx r4
 
-	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,sp,lr}
-	b hang
-;@	bx lr
+	pop {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+
+	subs pc,lr,#8
 
 .globl mmuenable
 mmuenable:
@@ -106,20 +224,6 @@ mmuenable:
 	dsb
 	
 	mrc p15,0,r0,c1,c0,0
-
-	bx lr
-
-.globl invalidatetlbs
-invalidatetlbs:
-	mov r2,#0
-	
-	mcr p15,0,r2,c7,c5,1
-	mcr p15,0,r2,c7,c6,1
-
-	mcr p15,0,r2,c8,c7,0
-	mcr p15,0,r2,c7,c10,1
-
-	dsb
 
 	bx lr
 
